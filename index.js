@@ -4,12 +4,9 @@ const prompts = require('prompts');
 const clipboard = require("copy-paste");
 
 const { Configuration, OpenAIApi } = require("openai");
-const api_key_file_path = './openai_api_key.txt';
-
-const api_key = fs.readFileSync(api_key_file_path, 'utf8').trim();
 
 const configuration = new Configuration({
-  apiKey: api_key
+  apiKey: process.env.OPENAI_API_KEY
 });
 const openai = new OpenAIApi(configuration);
 
@@ -61,49 +58,47 @@ async function explainBashCommand(prompt) {
   }
 }
 
-async function promptApiKey() {
-  const input = await prompts({
-    type: 'text',
-    name: 'api_key',
-    message: 'Please enter your OpenAI API key:',
-  });
-
-  fs.writeFileSync(api_key_file_path, input.api_key);
-  return input.api_key;
+class CustomError extends Error {
+  constructor(message, name) {
+    super(message);
+    this.name = name;
+  }
 }
 
 async function main() {
-  const action = process.argv[2];
+  try {
+    const action = process.argv[2];
 
-  if (!fs.existsSync(api_key_file_path)) {
-    console.log('It looks like this is your first time running the program. Please enter your OpenAI API key.');
-    const api_key = await promptApiKey();
-  } else {
-    const api_key = fs.readFileSync(api_key_file_path, 'utf8').trim();
-  }
-
-  const input = await prompts({
-    type: 'text',
-    name: 'text',
-    message: 'Enter the freeform text or command:\n',
-  });
-
-  let result;
-
-  if (action === 'generate') {
-    result = await generateBashCommand(input.text);
-  } else if (action === 'explain') {
-    result = await explainBashCommand(input.text);
-  } else {
-    console.log('Invalid action. Please use either "generate" or "explain" as a command-line argument.');
-    return;
-  }
-  if (action === 'generate') {
-    clipboard.copy(result, () => {
-      console.log(`"${result}" was copied to the clipboard.`);
+    const input = await prompts({
+      type: 'text',
+      name: 'text',
+      message: 'Enter the freeform text or command:\n',
     });
+
+    let result;
+
+    if (action === 'generate') {
+      result = await generateBashCommand(input.text);
+    } else if (action === 'explain') {
+      result = await explainBashCommand(input.text);
+    } else {
+      throw new CustomError('Invalid action. Please use either "generate" or "explain" as a command-line argument.', 'InvalidActionError');
+    }
+
+    if (action === 'generate') {
+      clipboard.copy(result, () => {
+        console.log(`"${result}" was copied to the clipboard.`);
+      });
+    }
+
+    console.log(result);
+  } catch (error) {
+    if (error instanceof CustomError) {
+      console.error(error.message);
+    } else {
+      console.error('An unexpected error occurred:', error);
+    }
   }
-  console.log(result);
 }
 
 main();
