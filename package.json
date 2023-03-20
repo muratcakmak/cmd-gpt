@@ -1,6 +1,6 @@
 {
   "name": "cmd-gpt",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A CLI utility to generate commands using GPT-3.",
   "main": "index.js",
   "scripts": {
